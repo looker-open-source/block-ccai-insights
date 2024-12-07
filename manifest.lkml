@@ -1,16 +1,25 @@
-##################### Constants ###################
+#    Copyright 2024 Google LLC
 
-constant: CONNECTION_NAME {
-  value: "demodataset" #CCAI Demo Data
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+
+#        http://www.apache.org/licenses/LICENSE-2.0
+
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
+project_name: "ccai-insights"
+
+constant: db_connection_name {
+  value: "bq-looker-marketplace"
   export: override_optional
 }
 
-constant: INSIGHTS_TABLE {
-  value: "my_insights_dataset.my_insights_table" #CCAI Demo Data
-  export: override_optional
-}
-
-constant: UNNEST_TABLE {
-  value: "my_insights_table" #CCAI Demo Data
+constant: insights_table {
+  value: "insights_demo.insights_export"
   export: override_optional
 }
