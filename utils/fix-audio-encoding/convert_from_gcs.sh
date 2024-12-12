@@ -1,3 +1,6 @@
+#!/bin/bash
+### convert_from_gcs.sh
+
 #    Copyright 2024 Google LLC
 
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,14 +15,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-project_name: "ccai-insights"
+export src_gcs_bucket="<Source bucket name>"
+export dest_gcs_bucket="<Destination bucket name>"
+export project_id="<GCP Project ID>"
+export impersonated_service_account=None
+export sample_rate="<Sample rate in hertz>"
 
-constant: db_connection_name {
-  value: "bq-looker-marketplace"
-  export: override_optional
-}
+date +"%T.%3N"
 
-constant: insights_table {
-  value: "insights_demo.insights_export"
-  export: override_optional
-}
+python3 convert_from_gcs.py --src_gcs_bucket $src_gcs_bucket --dest_gcs_bucket $dest_gcs_bucket --project_id $project_id --impersonated_service_account $impersonated_service_account --sample_rate_hertz $sample_rate
+
+date +"%T.%3N"

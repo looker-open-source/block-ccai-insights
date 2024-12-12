@@ -12,14 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-project_name: "ccai-insights"
-
-constant: db_connection_name {
-  value: "bq-looker-marketplace"
-  export: override_optional
-}
-
-constant: insights_table {
-  value: "insights_demo.insights_export"
-  export: override_optional
+terraform {
+  required_version = "~> 1.7.4"
 }

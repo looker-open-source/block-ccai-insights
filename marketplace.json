@@ -7,21 +7,18 @@
   },
 
   "constants": {
-    "CONNECTION_NAME": {
+    "db_connection_name": {
       "label": "Connection Name",
        "value_constraint": "connection"
     },
-    "INSIGHTS_TABLE": {
+    "insights_table": {
       "label": "Insights Table"
-    },
-    "UNNEST_TABLE": {
-      "label": "Unnest Table"
     }
   },
   "models": [
     {
-      "name": "insights_demo",
-      "connection_constant": "CONNECTION_NAME"
+      "name": "insights",
+      "connection_constant": "db_connection_name"
     }
   ]
 }
