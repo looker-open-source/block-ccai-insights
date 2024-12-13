@@ -17,7 +17,7 @@
   },
   "models": [
     {
-      "name": "insights",
+      "name": "insights_demo",
       "connection_constant": "db_connection_name"
     }
   ]
