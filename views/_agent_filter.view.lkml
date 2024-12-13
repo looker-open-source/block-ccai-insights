@@ -12,14 +12,21 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-project_name: "ccai-insights"
+view: agent_filter {
+  parameter: agent_id_selector {
+    type: string
+    suggest_dimension: insights_data__agent_id_filter.agent_id
+    suggest_explore: insights_data__agent_id_filter
+  }
 
-constant: db_connection_name {
-  value: "bq-looker-marketplace"
-  export: override_optional
-}
+  dimension: agent_id_selected {
+    type: string
+    sql:
+    CASE
+      WHEN ${insights_data__agents.agent_id} = {% parameter agent_id_selector %} THEN ${insights_data__agents.agent_id}
+      ELSE ' All Other Agents'
+    END
+  ;;
+  }
 
-constant: insights_table {
-  value: "insights_demo.insights_export"
-  export: override_optional
 }

@@ -1,15 +1,24 @@
+#    Copyright 2024 Google LLC
+
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+
+#        http://www.apache.org/licenses/LICENSE-2.0
+
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
 view: insights_data {
-  sql_table_name: @{INSIGHTS_TABLE} ;;
+  sql_table_name: @{insights_table};;
   view_label: "1: Conversations"
 
-  dimension: agent_id {
-    type: string
-    description: "The user-provided identifier for the human agent who handled the conversation."
-    sql: ${TABLE}.agentId ;;
-    link: {
-      label: "Agent Performance Dashboard"
-      url: "/dashboards-next/insights_demo::agent_performance?Agent+ID={{ value}}&Import+Date={{ _filters['insights_data.load_date'] | url_encode }}&Start+Date={{ _filters['insights_data.start_date'] | url_encode }}&Type={{ _filters['insights_data.type'] | url_encode }}&Client+Sentiment+Category={{ _filters['insights_data.client_sentiment_category'] | url_encode }}"
-    }
+  dimension: agents {
+    hidden: yes
+    sql: ${TABLE}.agents ;;
   }
 
   dimension: agent_sentiment_magnitude {
@@ -26,9 +35,24 @@ view: insights_data {
     sql: ${TABLE}.agentSentimentScore ;;
   }
 
+  dimension: agent_speaking_nanos {
+    type: number
+    hidden: yes
+    description: "Duration of the conversation with the agent speaking in nanos."
+    sql: ${agent_speaking_percentage} * ${duration_nanos} ;;
+    value_format_name: decimal_0
+  }
+
+  dimension: agent_speaking_minutes {
+    type: number
+    description: "Duration of the conversation with the agent speaking (voice)."
+    sql: ${agent_speaking_percentage} * CAST(${duration_nanos}/60000000000 as INT64) ;;
+    value_format_name: decimal_0
+  }
+
   dimension: agent_speaking_percentage {
     type: number
-    description: "Percentage of the conversation with the agent speaking."
+    description: "Percentage of the conversation with the agent speaking (voice)."
     sql: ${TABLE}.agentSpeakingPercentage ;;
     value_format_name: percent_2
   }
@@ -39,11 +63,6 @@ view: insights_data {
     sql: ${TABLE}.audioFileUri ;;
   }
 
-  dimension: channel {
-    description: "Voice or Chat"
-    type: string
-    sql: case when ${audio_file_uri} not null then "Voice" else when ${transcript} not null then "Chat" end ;;
-  }
   dimension: client_sentiment_magnitude {
     group_label: "Sentiment"
     type: number
@@ -58,9 +77,23 @@ view: insights_data {
     sql: ${TABLE}.clientSentimentScore ;;
   }
 
+  dimension: client_speaking_nanos {
+    type: number
+    description: "Duration of the conversation with the client speaking in nanos."
+    sql: ${client_speaking_percentage} * ${duration_nanos} ;;
+    value_format_name: decimal_0
+  }
+
+  dimension: client_speaking_minutes {
+    type: number
+    description: "Duration of the conversation with the client speaking (voice)."
+    sql: ${client_speaking_percentage} * CAST(${duration_nanos}/60000000000 as INT64) ;;
+    value_format_name: decimal_0
+  }
+
   dimension: client_speaking_percentage {
     type: number
-    description: "Percentage of the conversation with the client speaking."
+    description: "Percentage of the conversation with the client speaking (voice)."
     sql: ${TABLE}.clientSpeakingPercentage ;;
     value_format_name: percent_2
   }
@@ -72,8 +105,14 @@ view: insights_data {
     sql: ${TABLE}.conversationName ;;
     link: {
       label: "Conversation Lookup Dashboard"
-      url: "/dashboards-next/insights_demo::conversation_lookup?Conversation+Name={{ value}}"
+      url: "/dashboards-next/insights::conversation_lookup?Conversation+Name={{ value }}"
     }
+  }
+
+  dimension: unnested_conversation_id {
+    type: string
+    description: "Extracted conversation ID"
+    sql: SUBSTR(${conversation_name}, 58, 91);;
   }
 
   dimension: day {
@@ -110,9 +149,75 @@ view: insights_data {
     sql: ${TABLE}.entities ;;
   }
 
+  dimension: hold_nanos {
+    hidden: yes
+    type: number
+    description: "Number of nanos calculated to be on hold (voice)."
+    sql: (${duration_nanos} - ${agent_speaking_nanos} - ${client_speaking_nanos} - ${silence_nanos}) ;;
+  }
+
+  dimension: hold_minutes {
+    type: number
+    description: "Number of minutes calculated to be on hold (voice)."
+    sql: CAST(${hold_nanos}/60000000000 as INT64) ;;
+  }
+
+  dimension: hold_percentage {
+    type: number
+    description: "Percentage of the total conversation spent on hold (voice)."
+    sql: ${hold_nanos}/NULLIF(${duration_nanos},0) ;;
+    value_format_name: percent_2
+  }
+
   dimension: labels {
     hidden: yes
     sql: ${TABLE}.labels ;;
+  }
+
+  dimension: latest_summary__answer_record {
+    type: string
+    description: "The name of the answer record. Format: projects/{project}/locations/{location}/answerRecords/{answer_record}"
+    sql: ${TABLE}.latestSummary.answerRecord ;;
+    group_label: "Latest Summary"
+    group_item_label: "Answer Record"
+  }
+
+  dimension: latest_summary__confidence {
+    type: number
+    description: "The confidence score of the summarization."
+    sql: ${TABLE}.latestSummary.confidence ;;
+    group_label: "Latest Summary"
+    group_item_label: "Confidence"
+  }
+
+  dimension: latest_summary__conversation_model {
+    type: string
+    description: "The name of the model that generates this summary. Format: projects/{project}/locations/{location}/conversationModels/{conversation_model}"
+    sql: ${TABLE}.latestSummary.conversationModel ;;
+    group_label: "Latest Summary"
+    group_item_label: "Conversation Model"
+  }
+
+  dimension: latest_summary__metadata {
+    hidden: yes
+    sql: ${TABLE}.latestSummary.metadata ;;
+    group_label: "Latest Summary"
+    group_item_label: "Metadata"
+  }
+
+  dimension: latest_summary__text {
+    type: string
+    description: "The summarization content that is concatenated into one string."
+    sql: ${TABLE}.latestSummary.text ;;
+    group_label: "Latest Summary"
+    group_item_label: "Text"
+  }
+
+  dimension: latest_summary__text_sections {
+    hidden: yes
+    sql: ${TABLE}.latestSummary.textSections ;;
+    group_label: "Latest Summary"
+    group_item_label: "Text Sections"
   }
 
   dimension_group: load {
@@ -124,12 +229,23 @@ view: insights_data {
     sql: TIMESTAMP_SECONDS(${TABLE}.loadTimestampUtc) ;;
   }
 
+  dimension: medium {
+    type: string
+    description: "PHONE_CALL or CHAT"
+    sql: ${TABLE}.medium ;;
+  }
+
   dimension: month {
     group_label: "Dates"
     hidden: yes
     type: number
     description: "Month date part of `load_timestamp_utc`."
     sql: ${TABLE}.month ;;
+  }
+
+  dimension: qa_scorecard_results {
+    hidden: yes
+    sql: ${TABLE}.qaScorecardResults ;;
   }
 
   dimension: sentences {
@@ -140,26 +256,53 @@ view: insights_data {
   dimension: silence_nanos {
     hidden: yes
     type: number
-    description: "Number of nanoseconds calculated to be in silence."
+    description: "Number of nanoseconds calculated to be in silence (voice)."
     sql: ${TABLE}.silenceNanos ;;
   }
 
   dimension: silence_seconds {
     hidden: yes
     type: number
-    description: "Number of seconds calculated to be in silence."
+    description: "Number of seconds calculated to be in silence (voice)."
     sql: CAST(${TABLE}.silenceNanos/1000000000 as INT64);;
   }
 
   dimension: silence_minutes {
     type: number
-    description: "Number of minutes calculated to be in silence."
+    description: "Number of minutes calculated to be in silence (voice)."
     sql: CAST(${TABLE}.silenceNanos/60000000000 as INT64) ;;
+  }
+
+  dimension: talk_nanos {
+    hidden: yes
+    type: number
+    description: "Number of nanoseconds agent + client talk time (voice)."
+    sql: ${agent_speaking_nanos}+${client_speaking_nanos} ;;
+  }
+
+  dimension: talk_seconds {
+    hidden: yes
+    type: number
+    description: "Number of seconds agent + client talk time (voice)."
+    sql: CAST(${talk_nanos}/1000000000 as INT64);;
+  }
+
+  dimension: talk_minutes {
+    type: number
+    description: "Number of minutes agent + client talk time (voice))."
+    sql: CAST(${talk_nanos}/60000000000 as INT64) ;;
+  }
+
+  dimension: talk_percentage {
+    type: number
+    description: "Percentage of the total conversation spent talking (voice)."
+    sql: ${talk_nanos}/NULLIF(${duration_nanos},0) ;;
+    value_format_name: percent_2
   }
 
   dimension: silence_percentage {
     type: number
-    description: "Percentage of the total conversation spent in silence."
+    description: "Percentage of the total conversation spent in silence (voice)."
     sql: ${TABLE}.silencePercentage ;;
     value_format_name: percent_2
   }
@@ -170,6 +313,7 @@ view: insights_data {
     timeframes: [time, hour_of_day, date, day_of_week, week, month_name, year, raw]
     description: "The time in UTC at which the conversation started."
     sql: TIMESTAMP_SECONDS(${TABLE}.startTimestampUtc) ;;
+    drill_fields: [insights_data__topics.name]
   }
 
   dimension_group: end {
@@ -205,20 +349,20 @@ view: insights_data {
     sql: ${TABLE}.turnCount ;;
   }
 
-  dimension: type {
-    description: "If the call was never transferred to a human, then the call is classified as Virtual. If the call was transferred to a human, then the call is classified as human."
-    type: string
-    sql: case when ${human_agent_turns.first_turn_human_agent} is null then "Virtual Agent"
-            else "Human Agent" end;;
-  }
+  # dimension: type {
+  #   description: "If the call was never transferred to a human, then the call is classified as Virtual. If the call was transferred to a human, then the call is classified as human."
+  #   type: string
+  #   sql: case when ${human_agent_turns.first_turn_human_agent} is null then "Virtual Agent"
+  #     else "Human Agent" end;;
+  # }
 
-  dimension: status {
-    description: "If the call was never transferred to a human, then Contained. If it was contained but lasted less than 1 minute, then Abandoned. If it was transferred to a human, then Transferred."
-    type: string
-    sql: case when ${human_agent_turns.first_turn_human_agent} is null and ${duration_minutes} < 1 then "Abandoned"
-     when ${human_agent_turns.first_turn_human_agent} is null then "Contained"
-      else "Transferred" end;;
-  }
+  # dimension: status {
+  #   description: "If the call was never transferred to a human, then Contained. If it was contained but lasted less than 1 minute, then Abandoned. If it was transferred to a human, then Transferred."
+  #   type: string
+  #   sql: case when ${human_agent_turns.first_turn_human_agent} is null and ${duration_minutes} < 1 then "Abandoned"
+  #         when ${human_agent_turns.first_turn_human_agent} is null then "Contained"
+  #           else "Transferred" end;;
+  # }
 
   dimension: words {
     hidden: yes
@@ -287,7 +431,7 @@ view: insights_data {
     group_label: "Sentiment"
     type: average
     sql: ${client_sentiment_category_value} ;;
-    value_format_name: decimal_4
+    value_format_name: decimal_2
   }
 
   dimension: agent_sentiment_category_value {
@@ -303,7 +447,7 @@ view: insights_data {
     group_label: "Sentiment"
     type: average
     sql: ${agent_sentiment_category_value} ;;
-    value_format_name: decimal_4
+    value_format_name: decimal_2
   }
 
   measure: bad_sentiment_conversation_count {
@@ -347,7 +491,7 @@ view: insights_data {
     description: "Negative Conversations / Total Conversations"
     group_label: "Sentiment"
     type: number
-    sql: ${bad_sentiment_conversation_count}/${conversation_count} ;;
+    sql: ${bad_sentiment_conversation_count}/NULLIF(${conversation_count},0) ;;
     value_format_name: percent_0
     drill_fields: [convo_info*]
   }
@@ -357,7 +501,7 @@ view: insights_data {
     description: "Positive Conversations / Total Conversations"
     group_label: "Sentiment"
     type: number
-    sql: ${good_sentiment_conversation_count}/${conversation_count} ;;
+    sql: ${good_sentiment_conversation_count}/NULLIF(${conversation_count},0) ;;
     value_format_name: percent_0
     drill_fields: [convo_info*]
   }
@@ -367,7 +511,7 @@ view: insights_data {
     description: "Neautral Conversations / Total Conversations"
     group_label: "Sentiment"
     type: number
-    sql: ${neutral_sentiment_conversation_count}/${conversation_count} ;;
+    sql: ${neutral_sentiment_conversation_count}/NULLIF(${conversation_count},0) ;;
     value_format_name: percent_0
     drill_fields: [convo_info*]
   }
@@ -377,7 +521,7 @@ view: insights_data {
     description: "Mixed Conversations / Total Conversations"
     group_label: "Sentiment"
     type: number
-    sql: ${mixed_sentiment_conversation_count}/${conversation_count} ;;
+    sql: ${mixed_sentiment_conversation_count}/NULLIF(${conversation_count},0) ;;
     value_format_name: percent_0
     drill_fields: [convo_info*]
   }
@@ -414,27 +558,47 @@ view: insights_data {
     drill_fields: [convo_info*,agent_sentiment_score, agent_sentiment_magnitude]
   }
 
-
 ### Measures ###
   measure: conversation_count {
     type: count
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.conversation_count&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&f[insights_data__topics.name]={{ _filters['insights_data__topics.name'] }}&f[insights_data.medium]={{ _filters['insights_data.medium'] }}&f[insights_data__sentences__phrase_match_data.display_name]={{ _filters['insights_data__sentences__phrase_match_data.display_name'] }}&limit=500"
+    }
+    link: {
+      label: "by Topic"
+      url: "/explore/insights/insights_data?fields=insights_data__topics.name,insights_data.conversation_count,&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&f[insights_data__topics.name]={{ _filters['insights_data__topics.name'] }}&f[insights_data.medium]={{ _filters['insights_data.medium'] }}&f[insights_data__sentences__phrase_match_data.display_name]={{ _filters['insights_data__sentences__phrase_match_data.display_name'] }}&limit=500"
+    }
     drill_fields: [convo_info*]
   }
 
-  measure: contained_count {
-    description: "A conversation is considered contained if it was never passed to a human agent."
-    type: count
-    filters: [type: "Virtual Agent"]
+  measure: agent_count {
+    type: count_distinct
+    sql: ${insights_data__agents.agent_id} ;;
     drill_fields: [convo_info*]
   }
 
-  measure: contained_percentage {
-    description: "A conversation is considered contained if it was never passed to a human agent."
+  measure: avg_conversations_per_agent {
     type: number
-    sql: ${contained_count}/${conversation_count} ;;
-    value_format_name: percent_0
+    sql: ${conversation_count} / ${agent_count} ;;
     drill_fields: [convo_info*]
+    value_format_name: decimal_0
   }
+
+  # measure: contained_count {
+  #   description: "A conversation is considered contained if it was never passed to a human agent."
+  #   type: count
+  #   filters: [type: "Virtual Agent"]
+  #   drill_fields: [convo_info*]
+  # }
+
+  # measure: contained_percentage {
+  #   description: "A conversation is considered contained if it was never passed to a human agent."
+  #   type: number
+  #   sql: ${contained_count}/${conversation_count} ;;
+  #   value_format_name: percent_0
+  #   drill_fields: [convo_info*]
+  # }
 
   measure: num_of_characters {
     label: "Number of Characters"
@@ -462,11 +626,102 @@ view: insights_data {
     drill_fields: [convo_info*, duration_minutes]
   }
 
+  measure: average_hold_minutes {
+    description: "Average minutes of total conversation spent on hold (voice only)"
+    type: average
+    sql: ${hold_minutes} ;;
+    value_format_name: decimal_0
+    # drill_fields: [convo_info*, hold_minutes]
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.average_hold_minutes,insights_data.average_hold_percentage&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+    link: {
+      label: "by Topic"
+      url: "/explore/insights/insights_data?fields=insights_data__topics.name,insights_data.average_hold_minutes,insights_data.average_hold_percentage&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+
+  }
+
+  measure: average_hold_minutes_75_percentile {
+    description: "Average minutes of total conversation spent on hold (voice only)"
+    type: percentile
+    percentile: 75
+    sql: ${hold_minutes} ;;
+    value_format_name: decimal_0
+  }
+
+
+  measure: average_duration_minutes {
+    description: "Average minutes of total handle time (voice only)"
+    type: average
+    sql: ${duration_minutes} ;;
+    value_format_name: decimal_0
+    # drill_fields: [convo_info*, hold_minutes]
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.average_duration_minutes&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+    link: {
+      label: "by Topic"
+      url: "/explore/insights/insights_data?fields=insights_data__topics.name,insights_data.average_duration_minutes&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+
+  }
+
+  measure: average_duration_minutes_75_percentile {
+    description: "Average minutes of total handle time (voice only)"
+    type: percentile
+    percentile: 75
+    sql: ${duration_minutes} ;;
+    value_format_name: decimal_0
+  }
+
+  measure: average_hold_percentage {
+    description: "Average % of total conversation spent on hold (voice only)"
+    type: average
+    sql: ${hold_percentage} ;;
+    value_format_name: percent_2
+    drill_fields: [convo_info*, hold_percentage, hold_minutes]
+  }
+
+  measure: average_silence_minutes {
+    description: "Average minutes of total conversation spent in silence (voice only)"
+    type: average
+    sql: ${silence_minutes} ;;
+    value_format_name: decimal_0
+    # drill_fields: [convo_info*, silence_minutes]
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.average_silence_minutes,insights_data.average_silence_percentage&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+    link: {
+      label: "by Topic"
+      url: "/explore/insights/insights_data?fields=insights_data__topics.name,insights_data.average_silence_minutes,insights_data.average_silence_percentage&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+  measure: average_silence_minutes_75_percentile {
+    description: "Average minutes of total conversation spent in silence (voice only)"
+    type: percentile
+    percentile: 75
+    sql: ${silence_minutes} ;;
+    value_format_name: decimal_0
+  }
+
   measure: average_silence_percentage {
+    description: "Average % of total conversation spent in silence (voice only)"
     type: average
     sql: ${silence_percentage} ;;
     value_format_name: percent_2
     drill_fields: [convo_info*, silence_percentage, silence_minutes]
+  }
+
+  measure: average_agent_speaking_minutes {
+    description: "Average minutes of total conversation where agent is speaking"
+    type: average
+    sql: ${agent_speaking_minutes} ;;
+    value_format_name: decimal_0
   }
 
   measure: average_agent_speaking_percentage {
@@ -483,9 +738,223 @@ view: insights_data {
     drill_fields: [convo_info*, client_speaking_percentage]
   }
 
- set: convo_info {
-   fields: [agent_id, conversation_name, turn_count, load_time, duration_minutes, type, client_sentiment_category, agent_sentiment_category, status]
- }
+  measure: average_talk_minutes {
+    description: "Average minutes of total conversation spent talking (voice only)"
+    type: average
+    sql: ${talk_minutes} ;;
+    value_format_name: decimal_0
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.average_talk_minutes,insights_data.average_talk_percentage&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+    link: {
+      label: "by Topic"
+      url: "/explore/insights/insights_data?fields=insights_data__topics.name,insights_data.average_talk_minutes,insights_data.average_talk_percentage&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+  measure: average_talk_minutes_75_percentile {
+    description: "Average minutes of total conversation spent talking (voice only"
+    type: percentile
+    percentile: 75
+    sql: ${talk_minutes} ;;
+    value_format_name: decimal_0
+  }
+
+  measure: average_talk_percentage {
+    description: "Average % of total conversation spent talking (voice only)"
+    type: average
+    sql: ${talk_percentage} ;;
+    value_format_name: percent_2
+  }
+
+  ################### Scorecard ######################
+  dimension: authentication_flag {
+    group_label: "Scorecard"
+    type: string
+    sql: CASE WHEN ${insights_data__sentences__intent_match_data.display_name} = 'AUTHENTICATION_INFO' THEN ${unnested_conversation_id}
+       ELSE Null
+       END  ;;
+  }
+
+  measure: count_authentication_flag {
+    group_label: "Scorecard"
+    type: count_distinct
+    sql: ${authentication_flag} ;;
+  }
+
+  measure: authentication_pct {
+    group_label: "Scorecard"
+    description: "% frequency of agent verifying customer information"
+    type: number
+    sql: ${count_authentication_flag} / NULLIF(${conversation_count},0) ;;
+    value_format_name: percent_0
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.authentication_pct&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+  dimension: check_issue_resolved_flag {
+    group_label: "Scorecard"
+    type: string
+    sql: CASE WHEN ${insights_data__sentences__intent_match_data.display_name} = 'CHECK_ISSUE_RESOLVED' THEN ${unnested_conversation_id}
+      ELSE Null
+      END ;;
+  }
+
+  measure: count_check_issue_resolved_flag {
+    group_label: "Scorecard"
+    type: count_distinct
+    sql: ${check_issue_resolved_flag} ;;
+  }
+
+  measure: check_issue_resolved_pct {
+    group_label: "Scorecard"
+    description: "% frequency of agent verifying customer information"
+    type: number
+    sql: ${count_check_issue_resolved_flag} / NULLIF(${conversation_count},0) ;;
+    value_format_name: percent_0
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.check_issue_resolved_pct&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+  dimension: confirm_issue_resolved_flag {
+    group_label: "Scorecard"
+    type: string
+    sql: CASE WHEN ${insights_data__sentences__intent_match_data.display_name} = 'CONFIRM_ISSUE_RESOLVED' THEN ${unnested_conversation_id}
+      ELSE Null
+      END ;;
+  }
+
+  measure: count_confirm_issue_resolved_flag {
+    group_label: "Scorecard"
+    type: count_distinct
+    sql: ${confirm_issue_resolved_flag} ;;
+  }
+
+  measure: confirm_issue_resolved_pct {
+    group_label: "Scorecard"
+    description: "% frequency of agent verifying customer information"
+    type: number
+    sql: ${count_confirm_issue_resolved_flag} / NULLIF(${conversation_count},0) ;;
+    value_format_name: percent_0
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.confirm_issue_resolved_pct&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+  dimension: closing_flag {
+    group_label: "Scorecard"
+    type: string
+    sql: CASE WHEN ${insights_data__sentences__phrase_match_data.display_name} = 'Closing' THEN ${unnested_conversation_id}
+       ELSE Null
+       END  ;;
+  }
+
+  measure: count_closing_flag {
+    group_label: "Scorecard"
+    type: count_distinct
+    sql: ${closing_flag} ;;
+  }
+
+  measure: closing_pct {
+    group_label: "Scorecard"
+    description: "% frequency of closing"
+    type: number
+    sql: ${count_closing_flag} / NULLIF(${conversation_count},0) ;;
+    value_format_name: percent_0
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.closing_pct&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+  dimension: greeting_flag {
+    group_label: "Scorecard"
+    type: string
+    sql: CASE WHEN ${insights_data__sentences__phrase_match_data.display_name} = 'Greeting' THEN ${unnested_conversation_id}
+       ELSE Null
+       END  ;;
+  }
+
+  measure: count_greeting_flag {
+    group_label: "Scorecard"
+    type: count_distinct
+    sql: ${greeting_flag} ;;
+  }
+
+  measure: greeting_pct {
+    group_label: "Scorecard"
+    description: "% frequency of greeting"
+    type: number
+    sql: ${count_greeting_flag} / NULLIF(${conversation_count},0) ;;
+    value_format_name: percent_0
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.greeting_pct&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+  dimension: inflammatory_agent_langugage_flag {
+    group_label: "Scorecard"
+    type: string
+    sql: CASE WHEN ${insights_data__sentences__phrase_match_data.display_name} = 'Inflammatory Agent Language' THEN ${unnested_conversation_id}
+       ELSE Null
+       END  ;;
+  }
+
+  measure: count_inflammatory_agent_langugage_flag {
+    group_label: "Scorecard"
+    type: count_distinct
+    sql: ${inflammatory_agent_langugage_flag} ;;
+  }
+
+  measure: inflammatory_agent_langugage_pct {
+    group_label: "Scorecard"
+    description: "% frequency of inflammatory agent langugage"
+    type: number
+    sql: ${count_inflammatory_agent_langugage_flag} / NULLIF(${conversation_count},0) ;;
+    value_format_name: percent_0
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.inflammatory_agent_langugage_pct&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+  dimension: ability_to_understand_agent_flag {
+    group_label: "Scorecard"
+    type: string
+    sql: CASE WHEN ${insights_data__sentences__phrase_match_data.display_name} = 'Ability to understand agent' THEN ${unnested_conversation_id}
+       ELSE Null
+       END  ;;
+  }
+
+  measure: count_ability_to_understand_agent_flag {
+    group_label: "Scorecard"
+    type: count_distinct
+    sql: ${ability_to_understand_agent_flag} ;;
+  }
+
+  measure: ability_to_understand_agent_pct {
+    group_label: "Scorecard"
+    description: "% frequency of ability to understand agent"
+    type: number
+    sql: ${count_ability_to_understand_agent_flag} / NULLIF(${conversation_count},0) ;;
+    value_format_name: percent_0
+    link: {
+      label: "by Agent"
+      url: "/explore/insights/insights_data?fields=insights_data__agents.agent_id,insights_data.ability_to_understand_agent_pct&f[insights_data.start_date]={{ _filters['insights_data.start_date'] }}&limit=500"
+    }
+  }
+
+
+  set: convo_info {
+    fields: [insights_data__agents.agent_id, conversation_name, turn_count, load_time, client_sentiment_category, agent_sentiment_category]
+  }
 }
 
 view: insights_data__words {
@@ -552,6 +1021,8 @@ view: insights_data__topics {
     group_label: "Topics"
     type: string
     description: "Name of the topic."
+    suggest_dimension: insights_data__topics_filter.topic_name
+    suggest_explore: insights_data__topics_filter
     sql: ${TABLE}.name ;;
   }
 
@@ -561,6 +1032,20 @@ view: insights_data__topics {
     type: number
     description: "Score indicating the likelihood of the topic assignment, between 0 and 1.0."
     sql: ${TABLE}.score ;;
+  }
+
+  dimension: issuemodelid {
+    label: "Topic Model ID"
+    group_label: "Topics"
+    type: string
+    sql: ${TABLE}.issuemodelid  ;;
+  }
+
+  dimension: issueid {
+    label: "Topic ID"
+    group_label: "Topics"
+    type: string
+    sql: ${TABLE}.issueid  ;;
   }
 
   measure: count {
@@ -573,7 +1058,20 @@ view: insights_data__topics {
 
   set: topic_detail {
     fields:[name, score]
-    }
+  }
+}
+
+view: insights_data__topics_filter {
+  derived_table: {
+    sql: SELECT
+          insights_data__topics.name  AS topic_name
+          FROM @{insights_table}  AS insights_data
+          LEFT JOIN UNNEST(insights_data.issues) as insights_data__topics
+          GROUP BY
+              1 ;;
+  }
+
+  dimension: topic_name {}
 }
 
 view: insights_data__entities {
@@ -715,6 +1213,11 @@ view: insights_data__sentences {
     sql: ${TABLE}.endOffsetNanos ;;
   }
 
+  dimension: highlight_data {
+    hidden: yes
+    sql: ${TABLE}.highlightData ;;
+  }
+
   dimension: intent_match_data {
     hidden: yes
     sql: ${TABLE}.intentMatchData ;;
@@ -793,11 +1296,11 @@ view: insights_data__sentences {
     sql: ${TABLE}.startOffsetNanos ;;
   }
 
-  dimension: is_sentence_before_transfer_human {
-    description: "Identifies the sentence right before the call was transferred to a human agent."
-    type: yesno
-    sql: ${human_agent_turns.first_turn_human_agent} = ${sentence_turn_number.turn_number}-1;;
-  }
+  # dimension: is_sentence_before_transfer_human {
+  #   description: "Identifies the sentence right before the call was transferred to a human agent."
+  #   type: yesno
+  #   sql: ${human_agent_turns.first_turn_human_agent} = ${sentence_turn_number.turn_number}-1;;
+  # }
 
   ############################ Sentiment Analysis #######################
 #Configure manual score and magnitude thresholds here in the default_value parameter. To allow users to eadjust these values in the UI, set the hidden parameter to no.
@@ -827,20 +1330,20 @@ view: insights_data__sentences {
           ELSE "Neutral" END;;
   }
 
-dimension: sentiment_category_value {
+  dimension: sentiment_category_value {
     description: "Sentiment score multiplied by sentiment magnitude"
     type: number
     group_label: "Sentiment"
     sql: ${sentiment_score}*${sentiment_magnitude} ;;
     value_format_name: decimal_4
-}
+  }
 
-measure: average_sentiment_category_value{
-  type: average
-  group_label: "Sentiment"
-  sql: ${sentiment_category_value} ;;
-  value_format_name: decimal_4
-}
+  measure: average_sentiment_category_value{
+    type: average
+    group_label: "Sentiment"
+    sql: ${sentiment_category_value} ;;
+    value_format_name: decimal_4
+  }
 
   measure: average_sentiment_score {
     group_label: "Sentiment"
@@ -859,6 +1362,7 @@ measure: average_sentiment_category_value{
   ############################# Measures ##################################
 
   measure: count {
+    label: "Sentence Count"
     type: count_distinct
     sql: ${sentence} ;;
   }
@@ -922,11 +1426,11 @@ view: insights_data__sentences__annotations {
 view: insights_data__sentences__intent_match_data {
   #Documentation on Smart Highllights Here: https://cloud.google.com/contact-center/insights/docs/smart-highlights
   dimension: display_name {
-    #group_label: "Smart Highlights"
+    group_label: "Smart Highlights"
     label: "Smart Highlight Name"
     type: string
     description: "The human readable name of the matched intent."
-    sql: case when ${TABLE}.displayName is null then "No Smart Highlight Match" else ${TABLE}.displayName end ;;
+    sql: case when ${TABLE}.displayName is null then "" else ${TABLE}.displayName end ;;
   }
 
   dimension: intent_id {
@@ -941,7 +1445,7 @@ view: insights_data__sentences__intent_match_data {
 
   measure: count {
     label: "Smart Highlight Count"
-    #group_label: "Smart Highlights"
+    group_label: "Smart Highlights"
     type: count
   }
 }
@@ -949,10 +1453,12 @@ view: insights_data__sentences__intent_match_data {
 view: insights_data__sentences__phrase_match_data {
   dimension: display_name {
     label: "Custom Highlight Name"
-    #group_label: "Custom Highlights"
+    group_label: "Custom Highlights"
     type: string
     description: "The human readable name of the phrase matcher set up as a custom highlight in the Insights console."
-    sql: case when ${TABLE}.displayName is null then "No Custom Highlight Match" else ${TABLE}.displayName end ;;
+    sql: case when ${TABLE}.displayName is null then "" else ${TABLE}.displayName end ;;
+    suggest_dimension: insights_data__sentences__custom_highligh_filter.display_name
+    suggest_explore: insights_data__sentences__custom_highligh_filter
   }
 
   dimension: phrase_matcher_id {
@@ -978,6 +1484,22 @@ view: insights_data__sentences__phrase_match_data {
     group_label: "Custom Highlights"
     type: count
   }
+}
+
+view: insights_data__sentences__custom_highlight_filter {
+  derived_table: {
+    sql: SELECT
+          case when insights_data__sentences__phrase_match_data.displayName is null then "No Custom Highlight Match" else insights_data__sentences__phrase_match_data.displayName end  AS display_name
+          FROM @{insights_table} AS insights_data
+          LEFT JOIN UNNEST(insights_data.sentences) as insights_data__sentences
+          LEFT JOIN UNNEST(insights_data__sentences.phraseMatchData) as insights_data__sentences__phrase_match_data
+          GROUP BY
+              1
+          ORDER BY
+              1 ;;
+  }
+
+  dimension: display_name {}
 }
 
 view: insights_data__sentences__dialogflow_intent_match_data {
@@ -1016,20 +1538,49 @@ view: insights_data__sentences__dialogflow_intent_match_data {
   }
 }
 
+view: insights_data__sentences__highlight_data {
+  #combined view of custom highlights and smart higlights into a single column
+  dimension: display_name {
+    label: "Highlighter Name"
+    group_label: "Highlighter"
+    type: string
+    description: "The human readable name of the highlighter."
+    sql: ${TABLE}.displayName ;;
+  }
+
+  dimension: highlighter_id {
+    primary_key: yes
+    hidden: yes
+    label: "Highlighter ID"
+    group_label: "Highlighter"
+    type: string
+    description: "The unique id of the highlighter."
+    sql: ${TABLE}.highlighterName ;;
+  }
+
+  dimension: type {
+    label: "Highlighter Type"
+    group_label: "Highlighter"
+    type: string
+    description: "The type of the highlighter."
+    sql: ${TABLE}.type ;;
+  }
+}
+
 view: sentence_turn_number {
   derived_table: {
     sql: SELECT
-    insights_data.conversationName  AS conversation_name,
-    insights_data__sentences.sentence  AS sentence,
-        insights_data__sentences.createTimeNanos AS created_test,
-        rank() over(partition by insights_data.conversationName order by insights_data__sentences.createTimeNanos asc) AS turn_number
-    FROM @{INSIGHTS_TABLE} AS insights_data
-    LEFT JOIN UNNEST(insights_data.sentences) as insights_data__sentences
-    GROUP BY
-    1,
-    2,
-    3 ;;
-    }
+          insights_data.conversationName  AS conversation_name,
+          insights_data__sentences.sentence  AS sentence,
+              insights_data__sentences.createTimeNanos AS created_test,
+              rank() over(partition by insights_data.conversationName order by insights_data__sentences.createTimeNanos asc) AS turn_number
+          FROM @{insights_table} AS insights_data
+          LEFT JOIN UNNEST(insights_data.sentences) as insights_data__sentences
+          GROUP BY
+          1,
+          2,
+          3 ;;
+  }
 
   dimension: conversation_name {
     hidden: yes
@@ -1056,58 +1607,107 @@ view: sentence_turn_number {
   }
 }
 
-view: human_agent_turns {
-  derived_table: {
-    sql: WITH sentence_turn_number AS (SELECT
-    insights_data.conversationName  AS conversation_name,
-    insights_data__sentences.sentence  AS sentence,
-    insights_data__sentences.createTimeNanos AS created_test,
-    rank() over(partition by insights_data.conversationName order by insights_data__sentences.createTimeNanos asc) AS turn_number
-    FROM @{INSIGHTS_TABLE} AS insights_data
-    LEFT JOIN UNNEST(insights_data.sentences) as insights_data__sentences
-    GROUP BY
-    1,
-    2,
-    3 )
-SELECT
-    insights_data.conversationName  AS conversation_name,
-    min(sentence_turn_number.turn_number) AS first_turn_human_agent
-FROM @{INSIGHTS_TABLE} AS insights_data
-LEFT JOIN UNNEST(insights_data.sentences) as insights_data__sentences
-LEFT JOIN sentence_turn_number ON insights_data.conversationName=sentence_turn_number.conversation_name
-    and insights_data__sentences.sentence = sentence_turn_number.sentence
-    and (TIMESTAMP_MICROS(CAST(insights_data__sentences.createTimeNanos/1000 as INT64))) = (TIMESTAMP_MICROS(CAST(sentence_turn_number.created_test/1000 as INT64)))
-    where insights_data__sentences.participantRole = "HUMAN_AGENT"
-GROUP BY
-    1 ;;
+view: insights_data__agents {
+  drill_fields: [agent_id]
+
+  dimension: agent_id {
+    primary_key: yes
+    type: string
+    description: "A user-specified string representing the agent."
+    sql: agentId ;;
+    link: {
+    label: "Agent Performance Dashboard"
+    url: "/dashboards-next/insights::agent_performance?Agent+ID+Selector={{ value }}"
+    }
+    suggest_dimension: agent_id
+    suggest_explore: insights_data__agent_id_filter
   }
 
-  dimension: conversation_name {
+  dimension: agent_display_name {
+    type: string
+    description: "The agent's name"
+    sql: agentDisplayName ;;
+  }
+
+  dimension: agent_team {
+    type: string
+    description: "A user-specified string representing the agent's team."
+    sql: agentTeam ;;
+  }
+
+  dimension: insights_data__agents {
+    type: string
+    description: "Metadata about the agent dimension."
     hidden: yes
-    primary_key:  yes
-    description: "Name of the conversation resource."
-  }
-  dimension: first_turn_human_agent {
-    description: "The turn number for the first time a human agent entered a conversation."
-  }
-  measure: average_first_turn_human_agent {
-    type: average
-    sql: ${first_turn_human_agent} ;;
-    value_format_name: decimal_0
+    sql: insights_data__agents ;;
   }
 }
+
+view: insights_data__agent_id_filter {
+  derived_table: {
+    sql: SELECT
+          insights_data__agents.agentid  AS agent_id
+          FROM @{insights_table}  AS insights_data
+          LEFT JOIN UNNEST(insights_data.agents) as insights_data__agents
+          GROUP BY
+              1 ;;
+  }
+
+  dimension: agent_id {}
+}
+
+# view: human_agent_turns {
+#   derived_table: {
+#     sql: WITH sentence_turn_number AS (SELECT
+#           insights_data.conversationName  AS conversation_name,
+#           insights_data__sentences.sentence  AS sentence,
+#           insights_data__sentences.createTimeNanos AS created_test,
+#           rank() over(partition by insights_data.conversationName order by insights_data__sentences.createTimeNanos asc) AS turn_number
+#           FROM @{insights_table} AS insights_data
+#           LEFT JOIN UNNEST(insights_data.sentences) as insights_data__sentences
+#           GROUP BY
+#           1,
+#           2,
+#           3 )
+#       SELECT
+#           insights_data.conversationName  AS conversation_name,
+#           min(sentence_turn_number.turn_number) AS first_turn_human_agent
+#       FROM @{insights_table} AS insights_data
+#       LEFT JOIN UNNEST(insights_data.sentences) as insights_data__sentences
+#       LEFT JOIN sentence_turn_number ON insights_data.conversationName=sentence_turn_number.conversation_name
+#           and insights_data__sentences.sentence = sentence_turn_number.sentence
+#           and (TIMESTAMP_MICROS(CAST(insights_data__sentences.createTimeNanos/1000 as INT64))) = (TIMESTAMP_MICROS(CAST(sentence_turn_number.created_test/1000 as INT64)))
+#           where insights_data__sentences.participantRole = "HUMAN_AGENT"
+#       GROUP BY
+#           1 ;;
+#   }
+
+#   dimension: conversation_name {
+#     hidden: yes
+#     primary_key:  yes
+#     description: "Name of the conversation resource."
+#   }
+#   dimension: first_turn_human_agent {
+#     description: "The turn number for the first time a human agent entered a conversation."
+#   }
+#   measure: average_first_turn_human_agent {
+#     type: average
+#     sql: ${first_turn_human_agent} ;;
+#     value_format_name: decimal_0
+#   }
+# }
 
 view: daily_facts {
 
   derived_table: {
     explore_source: insights_data {
-      column: load_date {}
-      column: conversation_type {field:insights_data.type}
+      column: start_date {}
+      column: conversation_medium {field:insights_data.medium}
       column: conversation_count {}
-      column: contained_count {}
+      # column: contained_count {}
       column: entity_count { field: insights_data__entities.count }
       column: topic_count { field: insights_data__topics.count }
-      column: contained_percentage {}
+      # column: contained_percentage {}
     }
   }
 
@@ -1115,14 +1715,14 @@ view: daily_facts {
     group_label: "Daily Metrics"
     primary_key: yes
     hidden: yes
-    sql: concat(${load_date}," ",${conversation_type}) ;;
+    sql: concat(${start_date}," ",${conversation_medium}) ;;
   }
-  dimension: load_date {
+  dimension: start_date {
     group_label: "Daily Metrics"
     hidden: yes
     type: date
   }
-  dimension: conversation_type {
+  dimension: conversation_medium {
     group_label: "Daily Metrics"
     hidden: yes
     type: string
@@ -1138,24 +1738,24 @@ view: daily_facts {
     group_label: "Daily Metrics"
     type: average
     sql: ${conversation_count} ;;
-    value_format_name: decimal_2
-    drill_fields: [insights_data.convo_info*]
+    value_format_name: decimal_0
+    drill_fields: [insights_data.start_date]
   }
-  dimension: contained_count {
-    group_label: "Daily Metrics"
-    hidden: yes
-    label: "Insights Data: Conversations Contained Count"
-    description: "A conversation is considered contained if it was never passed to a human agent."
-    type: number
-  }
-  measure: avg_daily_contained_conversations {
-    group_label: "Daily Metrics"
-    description: "Average Contained Conversations Per Day"
-    type: average
-    sql: ${contained_count} ;;
-    value_format_name: decimal_2
-    drill_fields: [insights_data.convo_info*]
-  }
+  # dimension: contained_count {
+  #   group_label: "Daily Metrics"
+  #   hidden: yes
+  #   label: "Insights Data: Conversations Contained Count"
+  #   description: "A conversation is considered contained if it was never passed to a human agent."
+  #   type: number
+  # }
+  # measure: avg_daily_contained_conversations {
+  #   group_label: "Daily Metrics"
+  #   description: "Average Contained Conversations Per Day"
+  #   type: average
+  #   sql: ${contained_count} ;;
+  #   value_format_name: decimal_0
+  #   drill_fields: [insights_data.convo_info*]
+  # }
   dimension: entity_count {
     group_label: "Daily Metrics"
     hidden:  yes
@@ -1166,7 +1766,7 @@ view: daily_facts {
     group_label: "Daily Metrics"
     description: "Average Entities Per Day"
     type: average
-    value_format_name: decimal_2
+    value_format_name: decimal_0
     sql: ${entity_count} ;;
   }
   dimension: topic_count {
@@ -1178,8 +1778,211 @@ view: daily_facts {
     group_label: "Daily Metrics"
     description: "Average Topics Per Day"
     type: average
-    value_format_name: decimal_2
+    value_format_name: decimal_0
     sql: ${topic_count} ;;
   }
 
+}
+
+view: insights_data__latest_summary__metadata {
+  dimension: key {
+    group_label: "Metadata"
+    type: string
+    description: "The key of the metadata."
+    sql: ${TABLE}.key ;;
+  }
+
+  dimension: value {
+    group_label: "Metadata"
+    type: string
+    description: "The value of the metadata."
+    sql: ${TABLE}.value ;;
+  }
+}
+
+view: insights_data__latest_summary__text_sections {
+  dimension: key {
+    group_label: "Text Sections"
+    type: string
+    description: "The name of the section."
+    sql: ${TABLE}.key ;;
+  }
+
+  dimension: value {
+    group_label: "Text Sections"
+    type: string
+    description: "The content of the section."
+    sql: ${TABLE}.value ;;
+  }
+}
+
+view: insights_data__qa_scorecard_results {
+  dimension: insights_data__qa_scorecard_results {
+    group_label: "Results"
+    type: string
+    description: "All QaScorecardResult(s) available for the conversation."
+    hidden: yes
+    sql: insights_data__qa_scorecard_results ;;
+  }
+
+  dimension: normalized_score {
+    group_label: "Results"
+    type: number
+    description: "Normalized score assigned for the conversation."
+    sql: normalizedScore ;;
+  }
+
+  dimension: potential_score {
+    group_label: "Results"
+    type: number
+    description: "The potential score assigned to the conversation."
+    sql: potentialScore ;;
+  }
+
+  dimension: qa_answers {
+    hidden: yes
+    sql: qaAnswers ;;
+  }
+
+  dimension: qa_answers__tags {
+    hidden: yes
+    sql: ${TABLE}.qaAnswers.tags ;;
+    group_label: "Qa Answers"
+    group_item_label: "Tags"
+  }
+
+  dimension: qa_scorecard {
+    group_label: "Results"
+    type: string
+    description: "Fully qualified resource name of the scorecard. Format: projects/{project}/locations/{location}/qaScorecards/{qa_scorecard_id}"
+    sql: qaScorecard ;;
+  }
+
+  dimension: qa_scorecard_result {
+    group_label: "Results"
+    type: string
+    description: "Fully qualified resource name of the scorecard result. Format: projects/{project}/locations/{location}/qaScorecards/{qa_scorecard_id}/revisions/{revision_id}/results/{result_id}"
+    sql: qaScorecardResult ;;
+  }
+
+  dimension: qa_scorecard_revision {
+    group_label: "Results"
+    type: string
+    description: "Fully qualified resource name of the scorecard revision. Format: projects/{project}/locations/{location}/qaScorecards/{qa_scorecard_id}/revisions/{revision_id}"
+    sql: qaScorecardRevision ;;
+  }
+
+  dimension: qa_tag_results {
+    hidden: yes
+    sql: qaTagResults ;;
+  }
+
+  dimension: score {
+    group_label: "Results"
+    type: number
+    description: "The score assigned to the conversation."
+    sql: score ;;
+  }
+}
+
+view: insights_data__qa_scorecard_results__qa_answers__tags {
+  dimension: insights_data__qa_scorecard_results__qa_answers__tags {
+    group_label: "Tags"
+    type: string
+    description: "User defined list of arbitrary tags."
+    sql: insights_data__qa_scorecard_results__qa_answers__tags ;;
+  }
+}
+
+view: insights_data__qa_scorecard_results__qa_answers {
+  dimension: normalized_score {
+    group_label: "QA Answers"
+    type: number
+    description: "The normalized score assigned to the answer."
+    sql: ${TABLE}.normalizedScore ;;
+  }
+
+  dimension: potential_score {
+    group_label: "QA Answers"
+    type: number
+    description: "The potential score assigned to the answer."
+    sql: ${TABLE}.potentialScore ;;
+  }
+
+  dimension: qa_answer_bool_value {
+    group_label: "QA Answers"
+    type: yesno
+    sql: ${TABLE}.qaAnswerBoolValue ;;
+  }
+
+  dimension: qa_answer_na_value {
+    group_label: "QA Answers"
+    type: yesno
+    sql: ${TABLE}.qaAnswerNaValue ;;
+  }
+
+  dimension: qa_answer_numeric_value {
+    group_label: "QA Answers"
+    type: number
+    sql: ${TABLE}.qaAnswerNumericValue ;;
+  }
+
+  dimension: qa_answer_string_value {
+    group_label: "QA Answers"
+    type: string
+    sql: ${TABLE}.qaAnswerStringValue ;;
+  }
+
+  dimension: qa_question__qa_question {
+    type: string
+    description: "Resource name of the question. Format: projects/{project}/locations/{location}/qaScorecards/{qa_scorecard_id}/revisions/{revision_id}/qaQuestions/{qa_question_id}"
+    sql: ${TABLE}.qaQuestion.qaQuestion ;;
+    group_label: "Qa Question"
+    group_item_label: "Qa Question"
+  }
+
+  dimension: qa_question__question_body {
+    type: string
+    description: "Question text. E.g., \"Did the agent greet the customer?\""
+    sql: ${TABLE}.qaQuestion.questionBody ;;
+    group_label: "Qa Question"
+    group_item_label: "Question Body"
+  }
+
+  dimension: score {
+    group_label: "QA Answers"
+    type: number
+    description: "The score assigned to the answer."
+    sql: ${TABLE}.score ;;
+  }
+}
+
+view: insights_data__qa_scorecard_results__qa_tag_results {
+  dimension: normalized_score {
+    group_label: "Tag Results"
+    type: number
+    description: "Normalized score for the given tag for this conversation."
+    sql: ${TABLE}.normalizedScore ;;
+  }
+
+  dimension: potential_score {
+    group_label: "Tag Results"
+    type: number
+    description: "The potential score assigned to the tag for this conversation."
+    sql: ${TABLE}.potentialScore ;;
+  }
+
+  dimension: score {
+    group_label: "Tag Results"
+    type: number
+    description: "The score assigned to the tag for this conversation."
+    sql: ${TABLE}.score ;;
+  }
+
+  dimension: tag {
+    group_label: "Tag Results"
+    type: string
+    description: "The tag assigned to question(s) in the scorecard."
+    sql: ${TABLE}.tag ;;
+  }
 }
