@@ -15,8 +15,8 @@
 connection: "@{db_connection_name}"
 
 # include all the views
-include: "/Insights_looker_block/views/*.view.lkml"
-include: "/Insights_looker_block/dashboards/*.dashboard.lookml"
+include: "/views/*.view.lkml"
+include: "/dashboards/*.dashboard.lookml"
 
 datagroup: insights_daily_datagroup {
   sql_trigger: SELECT current_date;;
