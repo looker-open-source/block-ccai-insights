@@ -22,7 +22,7 @@
   elements:
   - title: Top 5 Topics by Client Sentiment
     name: Top 5 Topics by Client Sentiment
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [insights_data__topics.name, insights_data.conversation_count, insights_data.average_client_sentiment_category_value,
@@ -134,7 +134,7 @@
     height: 7
   - title: Avg Silence
     name: Avg Silence
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [agent_filter.agent_id_selected, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -229,7 +229,7 @@
     height: 4
   - title: Client Sentiment Over Time
     name: Client Sentiment Over Time
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_line
     fields: [insights_data.average_client_sentiment_category_value, agent_filter.agent_id_selected,
@@ -303,7 +303,7 @@
     height: 7
   - title: Handle Time Trend
     name: Handle Time Trend
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_line
     fields: [agent_filter.agent_id_selected, insights_data.start_week, insights_data.average_duration_minutes]
@@ -410,7 +410,7 @@
     height: 9
   - title: Silence % Trend
     name: Silence % Trend
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_line
     fields: [insights_data.average_silence_percentage, agent_filter.agent_id_selected,
@@ -517,7 +517,7 @@
     height: 9
   - title: Agent Comparison by intents
     name: Agent Comparison by intents
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [agent_filter.agent_id_selected, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -600,7 +600,7 @@
     height: 6
   - title: Avg Hold
     name: Avg Hold
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [agent_filter.agent_id_selected, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -695,7 +695,7 @@
     height: 4
   - title: Avg Client Sentiment
     name: Avg Client Sentiment
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [agent_filter.agent_id_selected, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -789,7 +789,7 @@
     height: 4
   - title: Avg Talk
     name: Avg Talk
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [agent_filter.agent_id_selected, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -884,7 +884,7 @@
     height: 4
   - title: Avg Duration
     name: Avg Duration
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [agent_filter.agent_id_selected, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -979,7 +979,7 @@
     height: 4
   - title: Recent Conversation
     name: Recent Conversation
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [insights_data.conversation_name, insights_data.medium, insights_data.start_date,
@@ -1070,7 +1070,7 @@
     height: 7
   - title: Bottom 5 Topics by Client Sentiment
     name: Bottom 5 Topics by Client Sentiment
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [insights_data__topics.name, insights_data.conversation_count, insights_data.average_client_sentiment_category_value,
@@ -1182,7 +1182,7 @@
     height: 7
   - title: Volume
     name: Volume
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [agent_filter.agent_id_selected, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -1284,7 +1284,7 @@
     ui_config:
       type: advanced
       display: popover
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: agent_filter.agent_id_selector
@@ -1298,7 +1298,7 @@
       type: advanced
       display: popover
       options: []
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data.start_date
@@ -1311,7 +1311,7 @@
     ui_config:
       type: advanced
       display: popover
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data__topics.name
@@ -1325,7 +1325,7 @@
       type: button_toggles
       display: inline
       options:
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data.medium
