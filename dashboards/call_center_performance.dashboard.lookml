@@ -58,7 +58,7 @@
     height: 2
   - title: Client Sentiment Makeup
     name: Client Sentiment Makeup
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_area
     fields: [insights_data.conversation_count, insights_data.client_sentiment_category,
@@ -115,7 +115,7 @@
     height: 6
   - title: Client Sentiment by Day of Week
     name: Client Sentiment by Day of Week
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_column
     fields: [insights_data.conversation_count, insights_data.load_day_of_week, insights_data.client_sentiment_category]
@@ -169,7 +169,7 @@
     height: 6
   - title: Positive Conv % of Total
     name: Positive Conv % of Total
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.good_sentiment_ratio]
@@ -210,7 +210,7 @@
     height: 2
   - title: Average Turn Count
     name: Average Turn Count
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_turn_count]
@@ -237,7 +237,7 @@
     height: 2
   - title: Conversations Imported and Analyzed
     name: Conversations Imported and Analyzed
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_column
     fields: [insights_data.conversation_count, insights_data.load_date, insights_data.medium]
@@ -298,7 +298,7 @@
     height: 6
   - title: Negative Conv % of Total
     name: Negative Conv % of Total
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.bad_sentiment_ratio]
@@ -338,7 +338,7 @@
     height: 2
   - title: Avg Conv Length (min)
     name: Avg Conv Length (min)
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_conversation_minutes]
@@ -365,7 +365,7 @@
     height: 2
   - title: Popular Entities
     name: Popular Entities
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_wordcloud
     fields: [insights_data.conversation_count, insights_data__entities.name]
@@ -412,7 +412,7 @@
     height: 8
   - title: Top 10 Topics
     name: Top 10 Topics
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_bar
     fields: [insights_data.conversation_count, insights_data__topics.name]
@@ -479,7 +479,7 @@
     height: 12
   - title: Total Conversations
     name: Total Conversations
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.conversation_count]
@@ -510,7 +510,7 @@
     height: 2
   - title: Smart Highlights by Call Status
     name: Smart Highlights by Call Status
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_donut_multiples
     fields: [insights_data.conversation_count, insights_data__sentences__intent_match_data.display_name]
@@ -563,7 +563,7 @@
     height: 8
   - title: Avg Agent Sent Score
     name: Avg Agent Sent Score
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_agent_sentiment_score]
@@ -599,7 +599,7 @@
     height: 3
   - title: Agents Handling Long Conversations
     name: Agents Handling Long Conversations
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [insights_data.average_conversation_minutes, insights_data__agents.agent_id, insights_data.conversation_count]
@@ -633,7 +633,7 @@
     height: 12
   - title: Custom Highlights by Call Status
     name: Custom Highlights by Call Status
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_donut_multiples
     fields: [insights_data.conversation_count, insights_data__sentences__phrase_match_data.display_name]
@@ -686,7 +686,7 @@
     height: 8
   - title: Agents With Low Average Client Sentiment
     name: Agents With Low Average Client Sentiment
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [insights_data__agents.agent_id, insights_data.average_client_sentiment_category_value,
@@ -721,7 +721,7 @@
     height: 12
   - title: Avg Client Sent Score
     name: Avg Client Sent Score
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_client_sentiment_score]
@@ -757,7 +757,7 @@
     height: 3
   - title: Avg Daily Conversations
     name: Avg Daily Conversations
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [daily_facts.avg_daily_conversations]
@@ -783,7 +783,7 @@
     height: 2
   - title: Mixed Conv % of Total
     name: Mixed Conv % of Total
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.mixed_sentiment_ratio]
@@ -824,7 +824,7 @@
     height: 2
   - title: Neutral Conv % of Total
     name: Neutral Conv % of Total
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.neutral_sentiment_ratio]
@@ -873,7 +873,7 @@
     ui_config:
       type: button_group
       display: inline
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data.medium
@@ -887,7 +887,7 @@
       type: advanced
       display: popover
       options: []
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data.load_date
@@ -901,7 +901,7 @@
       type: relative_timeframes
       display: inline
       options: []
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data.start_date
@@ -915,7 +915,7 @@
       type: checkboxes
       display: popover
       options: []
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data.client_sentiment_category

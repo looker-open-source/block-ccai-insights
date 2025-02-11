@@ -21,7 +21,7 @@
   elements:
   - title: by Date
     name: by Date
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_line
     fields: [insights_data.start_date, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -92,7 +92,7 @@
     height: 7
   - title: Avg Hold Time
     name: Avg Hold Time
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_hold_minutes, insights_data.average_hold_percentage]
@@ -154,7 +154,7 @@
     height: 4
   - title: Avg Talk Time
     name: Avg Talk Time
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_talk_minutes, insights_data.average_talk_percentage]
@@ -215,7 +215,7 @@
     height: 4
   - title: by Top Topics
     name: by Top Topics
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_bar
     fields: [insights_data__topics.name, insights_data.average_talk_minutes, insights_data.average_hold_minutes,
@@ -286,7 +286,7 @@
     height: 7
   - title: Untitled
     name: Untitled
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_silence_minutes, insights_data.average_silence_percentage]
@@ -342,7 +342,7 @@
     height: 4
   - title: Volume
     name: Volume
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.conversation_count]
@@ -400,7 +400,7 @@
     height: 4
   - title: Sentiment
     name: Sentiment
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_client_sentiment_category_value, insights_data.average_agent_sentiment_category_value]
@@ -459,7 +459,7 @@
     height: 4
   - title: Bottom 5 Topics (By Sentiment)
     name: Bottom 5 Topics (By Sentiment)
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [insights_data__topics.name, insights_data.conversation_count, insights_data.average_client_sentiment_category_value,
@@ -569,7 +569,7 @@
     height: 7
   - title: Client and Agent Sentiment Over Time
     name: Client and Agent Sentiment Over Time
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_line
     fields: [insights_data.start_date, insights_data.average_client_sentiment_category_value,
@@ -639,7 +639,7 @@
     height: 5
   - title: Agent List
     name: Agent List
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [insights_data.average_duration_minutes, insights_data.average_hold_minutes,
@@ -683,7 +683,7 @@
     height: 7
   - title: Top 5 Topics (By Sentiment)
     name: Top 5 Topics (By Sentiment)
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: looker_grid
     fields: [insights_data__topics.name, insights_data.conversation_count, insights_data.average_client_sentiment_category_value,
@@ -793,7 +793,7 @@
     height: 7
   - title: Untitled
     name: Untitled (2)
-    model: insights
+    model: insights_demo
     explore: insights_data
     type: single_value
     fields: [insights_data.average_duration_minutes]
@@ -830,7 +830,7 @@
       type: advanced
       display: popover
       options: []
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data.start_date
@@ -844,7 +844,7 @@
       type: advanced
       display: popover
       options: []
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data__topics.name
@@ -858,7 +858,7 @@
       type: advanced
       display: popover
       options: []
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data__sentences__phrase_match_data.display_name
@@ -872,7 +872,7 @@
       type: button_group
       display: inline
       options:
-    model: insights
+    model: insights_demo
     explore: insights_data
     listens_to_filters: []
     field: insights_data.medium
