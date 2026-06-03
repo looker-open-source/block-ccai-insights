@@ -1,5 +1,7 @@
 # Block CCAI Insights
 
+This is not an officially supported Google product. This project is not eligible for the [Google Open Source Software Vulnerability Rewards Program](https://bughunters.google.com/open-source-security).
+
 The Insights block allows you to export data from the CCAI Insights solution and
 analyze it in Looker. The flexibility of the data model gives you the ability to
 integrate Insights data with other first party data to unlock deep business
